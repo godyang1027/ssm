@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+	http://www.springframework.org/schema/beans/spring-beans.xsd
+	http://www.springframework.org/schema/context
+	http://www.springframework.org/schema/context/spring-context.xsd
+	http://www.springframework.org/schema/aop
+	http://www.springframework.org/schema/aop/spring-aop.xsd
+	http://www.springframework.org/schema/tx
+	http://www.springframework.org/schema/tx/spring-tx.xsd">
+
+
+	<context:component-scan base-package="com.ybd"></context:component-scan>
+
+
+	<bean id="usersAction" class="com.ybd.action.UsersAction">
+		<property name="usersService" ref="usersService"></property>
+	</bean>
+	
+
+	<!-- 加载src下面的jdbc.properties文件， 数据库配置文件 -->
+	<context:property-placeholder
+		location="classpath:jdbc.properties" />
+	<!--1 数据源连接池 -->
+	<bean id="dataSource"
+		class="com.mchange.v2.c3p0.ComboPooledDataSource">
+		<property name="driverClass" value="${jdbc.driver}" />
+		<property name="jdbcUrl" value="${jdbc.url}" />
+		<property name="user" value="${jdbc.username}" />
+		<property name="password" value="${jdbc.password}" />
+	</bean>
+	<!--2 mybatis的 sqlSession数据连接工厂 -->
+
+	<!--配置SqlSessionFactory工厂 -->
+	<bean id="sqlSessionFactory"
+		class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<property name="configLocation" value="classpath:mybatis.xml" />
+	</bean>
+
+	<!--3 事务管理 -->
+	<bean id="transactionManager"
+		class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+
+	<!--4AOP切面增强 -->
+	<aop:config>
+		<aop:pointcut
+			expression="execution(* com.ybd.service.impl.*.*(..))" id="pt" />
+		<aop:advisor advice-ref="txAdvice" pointcut-ref="pt" />
+	</aop:config>
+
+	<!--5事务通知 -->
+	<tx:advice id="txAdvice"
+		transaction-manager="transactionManager">
+		<tx:attributes>
+			<tx:method name="find*" read-only="true" />
+			<tx:method name="*" isolation="DEFAULT" />
+		</tx:attributes>
+	</tx:advice>
+
+
+	<!--6将dao层接口自动实例化成对象 ,通过 MapperScannerConfigurer 去检测 com.ybd.dao里面的所有接口，然后实例化话到内存中 -->
+	<bean id="mapperScanner"
+		class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<property name="basePackage" value="com.ybd.dao" />
+	</bean>
+
+</beans>
